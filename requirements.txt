@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+pydantic[email]
+python-dotenv   # local dev only
+gspread
+google-auth
