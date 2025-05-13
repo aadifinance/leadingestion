@@ -6,6 +6,8 @@ from fastapi import FastAPI, Header, HTTPException, status
 from pydantic import BaseModel, Field, EmailStr, validator
 import re, os, gspread
 from datetime import datetime
+import json
+from gspread.exceptions import SpreadsheetNotFound, WorksheetNotFound
 
 app = FastAPI(title="AadiFinance Lead-Ingest API")
 
