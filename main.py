@@ -1,13 +1,13 @@
-
 # ll = 'C:/Users/Dotpe/D/Farming-397e0ad79319.json'
 # GOOGLE_SHEET_ID = "1eipfNkKILw8GoLU__aOATd0WUhpLpA9C4shKq4FTLsw"
 
-from fastapi import FastAPI, Header, HTTPException, status
+from fastapi import FastAPI, Header, HTTPException, status, Body
 from pydantic import BaseModel, Field, EmailStr, validator
 import re, os, gspread
 from datetime import datetime
 import json
 from gspread.exceptions import SpreadsheetNotFound, WorksheetNotFound
+from typing import List
 
 app = FastAPI(title="AadiFinance Lead-Ingest API")
 
@@ -68,7 +68,7 @@ def get_worksheet() -> gspread.Worksheet:
 # initialise once at startup
 ws = get_worksheet()
 
-# ──────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────���────
 # 3. Pydantic schema & validation
 # ──────────────────────────────────────────────────────────────
 PAN_REGEX = re.compile(r"^[A-Z]{5}[0-9]{4}[A-Z]$")
@@ -159,3 +159,66 @@ def submit_lead(
     ws.append_row(row, value_input_option="USER_ENTERED")
 
     return {"success": True, "message": "Lead created successfully"}
+
+
+# New: batch endpoint - accepts an array of leads and appends them in one batch
+# Validation: max 100 leads enforced at the FastAPI/Pydantic validation layer using Body(max_items=100)
+@app.post("/vendor/submit-leads")
+def submit_leads(
+    body: List[Lead] = Body(..., max_items=100),
+    x_api_key: str | None = Header(None, convert_underscores=False),
+):
+    # ➊ API-key auth
+    if x_api_key not in API_KEY_MAP:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={
+                "success": False,
+                "message": "Unauthorised Access! API Key is required!",
+            },
+        )
+
+    expected_partner = API_KEY_MAP[x_api_key]
+
+    # ➋ Ensure all leads match partner_id for this API key
+    mismatches = []
+    for idx, lead in enumerate(body):
+        if lead.partner_id != expected_partner:
+            mismatches.append({"index": idx, "partner_id": lead.partner_id})
+
+    if mismatches:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "success": False,
+                "message": "Data Validation Failed!",
+                "error": {"partner_id_mismatch": mismatches},
+            },
+        )
+
+    # ➌ Build rows and append in a batch
+    rows = []
+    for lead in body:
+        data = lead.dict(by_alias=True)
+        row = [datetime.utcnow().isoformat()] + [data.get(h, "") for h in HEADER_ROW[1:]]
+        rows.append(row)
+
+    try:
+        # try to use batch append if available
+        if hasattr(ws, "append_rows"):
+            ws.append_rows(rows, value_input_option="USER_ENTERED")
+        else:
+            # fallback: append one-by-one
+            for r in rows:
+                ws.append_row(r, value_input_option="USER_ENTERED")
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "success": False,
+                "message": "Failed to write to spreadsheet.",
+                "error": str(exc),
+            },
+        )
+
+    return {"success": True, "created": len(rows), "message": "Leads created successfully"}
