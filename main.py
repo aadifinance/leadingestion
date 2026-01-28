@@ -76,8 +76,8 @@ PAN_REGEX = re.compile(r"^[A-Z]{5}[0-9]{4}[A-Z]$")
 class Lead(BaseModel):
     phone: str = Field(..., min_length=10, max_length=10)
     email: EmailStr
-    first_name: str = Field(..., alias="first name")
-    last_name: str = Field(..., alias="last name")
+    first_name: str = Field(..., alias="first_name")
+    last_name: str = Field(..., alias="last_name")
     dob: str
     pan: str
     employment_type: str
@@ -222,3 +222,4 @@ def submit_leads(
         )
 
     return {"success": True, "created": len(rows), "message": "Leads created successfully"}
+
