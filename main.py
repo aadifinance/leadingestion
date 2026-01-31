@@ -21,7 +21,7 @@ SHEET_TITLE = "AadiFinance Leads"   # spreadsheet title when we create one
 TAB_NAME    = "Leads2"               # worksheet/tab name
 
 HEADER_ROW = [                      # keep order for appends
-    "timestamp", "phone", "email", "first name", "last name",
+    "timestamp", "phone", "email", "first_name", "last_name",
     "dob", "pan", "employment_type", "pincode", "income",
     "consent_datetime", "ip_address", "partner_id",
 ]
@@ -156,7 +156,7 @@ def submit_lead(
     # ➌ Append row to Google Sheets
     data = body.dict(by_alias=True)
     row = [datetime.utcnow().isoformat()] + [data.get(h, "") for h in HEADER_ROW[1:]]
-    ws.append_row(row, value_input_option="USER_ENTERED")
+    ws.append_row(row, table_range="A1", value_input_option="USER_ENTERED")
 
     return {"success": True, "message": "Lead created successfully"}
 
@@ -206,7 +206,7 @@ def submit_leads(
     try:
         # try to use batch append if available
         if hasattr(ws, "append_rows"):
-            ws.append_rows(rows, value_input_option="USER_ENTERED")
+            ws.append_rows(rows,  table_range="A1", value_input_option="USER_ENTERED")
         else:
             # fallback: append one-by-one
             for r in rows:
@@ -222,5 +222,6 @@ def submit_leads(
         )
 
     return {"success": True, "created": len(rows), "message": "Leads created successfully"}
+
 
 
