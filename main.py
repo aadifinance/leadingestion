@@ -18,7 +18,7 @@ API_KEY_MAP = {  # partner-specific keys ⇒ their partner_id
 }
 
 SHEET_TITLE = "AadiFinance Leads"   # spreadsheet title when we create one
-TAB_NAME    = "Leads"               # worksheet/tab name
+TAB_NAME    = "Leads2"               # worksheet/tab name
 
 HEADER_ROW = [                      # keep order for appends
     "timestamp", "phone", "email", "first name", "last name",
@@ -222,4 +222,5 @@ def submit_leads(
         )
 
     return {"success": True, "created": len(rows), "message": "Leads created successfully"}
+
 
